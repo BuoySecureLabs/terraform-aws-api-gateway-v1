@@ -1,60 +1,41 @@
+##################
+# Extra resources
+##################
+resource "random_pet" "this" {
+  length = 2
+}
+
 locals {
-  account_vars = read_terragrunt_config(find_in_parent_folders("account.hcl"))
-  product_vars = read_terragrunt_config(find_in_parent_folders("product.hcl"))
-  env_vars     = read_terragrunt_config(find_in_parent_folders("env.hcl"))
-  product      = local.product_vars.locals.product_name
-  prefix       = local.product_vars.locals.prefix
-  account      = local.account_vars.locals.account_id
-  env          = local.env_vars.locals.env
-
-  tags = merge(
-    local.env_vars.locals.tags,
-    local.additional_tags
-  )
-
-  additional_tags = {
+  name        = "ngp-api-gw-${random_pet.this.id}"
+  description = "NGP HTTP API Gateway"
+  region      = "us-east-1"
+  env         = "dev"
+  tags = {
+    Module     = "api-gateway-v1"
+    Capability = "doc-mgmt"
+    GithubRepo = "terraform-aws-apigateway-v2"
+    GithubOrg  = "terraform-aws-modules"
   }
 }
 
-include {
-  path = find_in_parent_folders()
-}
+module "rest-api" {
+  source = "../.."
 
-dependency "waf_acl" {
-  config_path = "../waf"
-}
-
-dependency "execution_role" {
-  config_path = "../iam/roles/apigw-execution"
-}
-
-dependency "execution_policy" {
-  config_path = "../iam/policies/apigw-execution"
-}
-
-terraform {
-  source = "git::git@github.com:adamwshero/terraform-aws-api-gateway.git//.?ref=1.0.7"
-}
-
-inputs = {
-  api_name          = "my-app-dev"
-  description       = "Development API for the My App service."
+  api_name          = local.name
+  description       = local.description
   endpoint_type     = ["REGIONAL"]
-  put_put_rest_api_mode = "merge"   // Toggle to `overwrite` only when renaming a resource path or removing a resource from the openapi definition.
+  put_rest_api_mode = "merge"   // Toggle to `overwrite` only when renaming a resource path or removing a resource from the openapi definition.
 
   // API Custom Domain
   create_api_domain_name = true
-  domain_names           = ["mydomain.something.com"]
-  domain_certificate_arn = "arn:aws:acm:us-east-1:1111111111111:certificate/1aa11a11-a1a1-1a11-aaa1-1111aaaa1a1a"
+  domain_names           = var.domain_names
 
   // API Resource Policy
   create_rest_api_policy = true
-  rest_api_policy = templatefile("${get_terragrunt_dir()}/api_policy.json.tpl",
-    {}
-  )
+  rest_api_policy = templatefile("${path.module}/api_policy.json.tpl", {} )
 
   // API Definition & Vars
-  openapi_definition = templatefile("${get_terragrunt_dir()}/openapi.yaml",
+  openapi_definition = templatefile("${path.module}/openapi.yaml",
     {
       endpoint_uri             = "https://my-app.nonprod.company.com/my_app_path"
       vpc_link_id              = "9ab12c"
@@ -70,7 +51,8 @@ inputs = {
   cache_cluster_size    = 0.5
   xray_tracing_enabled  = false
   log_group_name        = "/aws/apigateway/access/my_app/dev"
-  access_log_format     = templatefile("${get_terragrunt_dir()}/log_format.json.tpl", {})
+  access_log_format     = templatefile("${path.module}/log_format.json.tpl", {})
+  
   // Canary Stage Settings
   enable_canary   = false
   use_stage_cache = false
@@ -86,7 +68,7 @@ inputs = {
   method_path                                = "*/*"
   metrics_enabled                            = true
   data_trace_enabled                         = true
-  log_level                                  = "INFO"
+  logging_level                              = "INFO"
   throttling_burst_limit                     = 5000
   throttling_rate_limit                      = 10000
   caching_enabled                            = true

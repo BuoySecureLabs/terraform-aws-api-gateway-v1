@@ -297,13 +297,13 @@ variable "create_api_domain_name" {
 variable "domain_names" {
   description = "Fully-qualified domain name to register. The domain names to use for API gateway it will use the index of stage_names to select the domain name."
   type        = list(string)
-  default     = null
+  default     = "api.buoy-secure-ngp.com"
 }
 
 variable "domain_certificate_arn" {
   description = "The ARN of an AWS-managed certificate that will be used by the endpoint for the domain name."
   type        = string
-  default     = null
+  default     = "arn:aws:acm:us-east-1:339713166173:certificate/fab25185-9d3d-4676-a3e3-fb7198f2f2c8"
 }
 
 variable "mutual_tls_authentication" {

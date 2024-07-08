@@ -102,6 +102,7 @@ resource "aws_api_gateway_method_settings" "this" {
 resource "aws_api_gateway_account" "this" {
   cloudwatch_role_arn = var.cloudwatch_role_arn
 }
+
 resource "aws_api_gateway_api_key" "this" {
   for_each = {
     for key in var.api_keys : key.name => {
